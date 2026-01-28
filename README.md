@@ -4,8 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)](https://soliditylang.org/)
-[![Tests](https://img.shields.io/badge/Tests-393%20passing-brightgreen)]()
-[![Phase](https://img.shields.io/badge/Phase-2%20Complete-success)]()
+[![Tests](https://img.shields.io/badge/Tests-440%20passing-brightgreen)]()
+[![Phase](https://img.shields.io/badge/Phase-3%20Complete-success)]()
 
 ---
 
@@ -65,6 +65,12 @@ VoluntaryJustice is a maximally on-chain dispute resolution protocol that enable
 | `InsurerRegistry.sol` | Private insurer registration |
 | `InsurancePolicy.sol` | Policy purchase, renewal, claims |
 | `EnforcementEngine.sol` | Ruling execution and escalation |
+
+### Phase 3: Bounty Market & Mainnet Anchoring
+| Contract | Purpose |
+|----------|---------|
+| `ExclusionRegistry.sol` | Permanent exclusion records for non-compliance |
+| `BountyMarket.sol` | Recovery bounties with oracle/court/debtor verification |
 
 ---
 
@@ -171,7 +177,7 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 
 - [x] **Phase 1** - Core MVP (Identity, Contracts, Disputes, Escrow)
 - [x] **Phase 2** - Insurance & Appeals (Jury, Insurance, Enforcement)
-- [ ] **Phase 3** - Advanced Features (Bounty market, Oracles, Cross-chain)
+- [x] **Phase 3** - Bounty Market & Mainnet Anchoring (ExclusionRegistry, BountyMarket)
 
 ---
 
