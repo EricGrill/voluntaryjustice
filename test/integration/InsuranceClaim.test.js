@@ -6,8 +6,8 @@ const { ethers } = require("hardhat");
  *
  * Tests the insurance system from policy purchase through claim processing.
  */
-// TODO: Update integration tests for current contract signatures
-describe.skip("Integration: Insurance Claim Flow", function () {
+describe("Integration: Insurance Claim Flow", function () {
+  this.timeout(60000); // 1 minute timeout
   let vjToken;
   let reputationScoring;
   let templateRegistry;
@@ -129,10 +129,22 @@ describe.skip("Integration: Insurance Claim Flow", function () {
     const ENFORCEMENT_ROLE = await escrowVault.ENFORCEMENT_ROLE();
     await escrowVault.grantRole(ENFORCEMENT_ROLE, await enforcementEngine.getAddress());
 
-    // Mint tokens
-    await vjToken.mint(insurer.address, INSURER_STAKE);
+    // Grant InsurancePolicy permission to record policies on InsurerRegistry
+    const GOVERNANCE_ROLE = await insurerRegistry.GOVERNANCE_ROLE();
+    await insurerRegistry.grantRole(GOVERNANCE_ROLE, await insurancePolicy.getAddress());
+
+    // Grant SYSTEM_ROLE to DisputeResolution so it can mark contracts as disputed
+    const SYSTEM_ROLE = await contractFactory.SYSTEM_ROLE();
+    await contractFactory.grantRole(SYSTEM_ROLE, await disputeResolution.getAddress());
+
+    // Grant SYSTEM_ROLE to EnforcementEngine so it can record compliance
+    const DR_SYSTEM_ROLE = await disputeResolution.SYSTEM_ROLE();
+    await disputeResolution.grantRole(DR_SYSTEM_ROLE, await enforcementEngine.getAddress());
+
+    // Mint tokens (need extra beyond stake amount due to notifyStake tracking)
+    await vjToken.mint(insurer.address, INSURER_STAKE * 2n);
     await vjToken.mint(policyholder.address, ethers.parseEther("1000"));
-    await vjToken.mint(arbitrator.address, COURT_STAKE);
+    await vjToken.mint(arbitrator.address, COURT_STAKE * 2n);
     await vjToken.mint(owner.address, ethers.parseEther("100000")); // For baseline pool
 
     // Setup insurer
@@ -192,9 +204,9 @@ describe.skip("Integration: Insurance Claim Flow", function () {
 
       // Verify policy details
       const policy = await insurancePolicy.getPolicy(policyId);
-      expect(policy.holder).to.equal(policyholder.address);
+      expect(policy.policyholder).to.equal(policyholder.address);
       expect(policy.coverage).to.equal(POLICY_COVERAGE);
-      expect(policy.active).to.be.true;
+      expect(policy.status).to.equal(0); // Active
     });
 
     it("Should validate policy is active", async function () {
@@ -229,7 +241,7 @@ describe.skip("Integration: Insurance Claim Flow", function () {
       await insurancePolicy.connect(policyholder).renewPolicy(1);
 
       const policyAfter = await insurancePolicy.getPolicy(1);
-      expect(policyAfter.expiresAt).to.be.gt(policyBefore.expiresAt);
+      expect(policyAfter.endTime).to.be.gt(policyBefore.endTime);
     });
 
     it("Should cancel a policy", async function () {
@@ -246,7 +258,7 @@ describe.skip("Integration: Insurance Claim Flow", function () {
       await insurancePolicy.connect(policyholder).cancelPolicy(1);
 
       const policy = await insurancePolicy.getPolicy(1);
-      expect(policy.active).to.be.false;
+      expect(policy.status).to.equal(2); // Cancelled
     });
   });
 
@@ -262,7 +274,7 @@ describe.skip("Integration: Insurance Claim Flow", function () {
       await baselinePool.connect(policyholder).deposit(depositAmount);
 
       const coverage = await baselinePool.getCoverage(policyholder.address);
-      expect(coverage.contribution).to.equal(depositAmount);
+      expect(coverage.totalContribution).to.equal(depositAmount);
       expect(coverage.active).to.be.true;
     });
 
@@ -297,7 +309,8 @@ describe.skip("Integration: Insurance Claim Flow", function () {
       await contractFactory.connect(policyholder).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [policyholder.address, counterparty.address]
+        [policyholder.address, counterparty.address],
+        POLICY_COVERAGE // escrowRequired
       );
       await contractFactory.connect(policyholder).signContract(1);
       await contractFactory.connect(counterparty).signContract(1);
@@ -316,32 +329,30 @@ describe.skip("Integration: Insurance Claim Flow", function () {
 
       await disputeResolution.connect(arbitrator).submitRuling(
         1,
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["address", "uint256", "string"],
-          [policyholder.address, ethers.parseEther("5"), "Counterparty failed to deliver"]
-        ),
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["string"],
-          ["Pay damages"]
-        )
+        policyholder.address,
+        ethers.parseEther("5"),
+        ethers.toUtf8Bytes("Pay damages")
       );
 
       await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine");
-      await disputeResolution.finalizeRuling(1);
+      await disputeResolution.finalizeDispute(1);
 
       // Create enforcement
-      await enforcementEngine.createEnforcementAction(
-        1,
-        policyholder.address,
-        ethers.parseEther("5")
-      );
+      await enforcementEngine.createEnforcement(1);
+
+      // Grant EXECUTOR_ROLE to owner for testing
+      const EXECUTOR_ROLE = await enforcementEngine.EXECUTOR_ROLE();
+      await enforcementEngine.grantRole(EXECUTOR_ROLE, owner.address);
+
+      // Record payment to move status to InProgress
+      await enforcementEngine.recordPayment(1, 0);
 
       // Trigger insurance claim
       await enforcementEngine.triggerInsuranceClaim(1);
 
       const action = await enforcementEngine.getAction(1);
-      expect(action.insuranceClaimTriggered).to.be.true;
+      expect(action.insuranceClaimed).to.be.true;
     });
   });
 
@@ -371,7 +382,7 @@ describe.skip("Integration: Insurance Claim Flow", function () {
     it("Should list all active insurers", async function () {
       // Register another insurer
       const [, , , , , insurer2] = await ethers.getSigners();
-      await vjToken.mint(insurer2.address, INSURER_STAKE);
+      await vjToken.mint(insurer2.address, INSURER_STAKE * 2n);
       await vjToken.connect(insurer2).approve(await insurerRegistry.getAddress(), INSURER_STAKE);
       await insurerRegistry.connect(insurer2).registerInsurer(
         INSURER_STAKE,
@@ -379,7 +390,7 @@ describe.skip("Integration: Insurance Claim Flow", function () {
         ethers.keccak256(ethers.toUtf8Bytes("reserve-proof-2"))
       );
 
-      const insurers = await insurerRegistry.listActiveInsurers();
+      const insurers = await insurerRegistry.listInsurers();
       expect(insurers.length).to.equal(2);
     });
   });

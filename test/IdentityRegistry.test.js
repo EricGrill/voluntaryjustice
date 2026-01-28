@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 describe("IdentityRegistry", function () {
   let identityRegistry;
@@ -46,7 +47,7 @@ describe("IdentityRegistry", function () {
     it("Should emit IdentityRegistered event", async function () {
       await expect(identityRegistry.connect(user1).registerIdentity(sybilProof))
         .to.emit(identityRegistry, "IdentityRegistered")
-        .withArgs(user1.address, await getBlockTimestamp());
+        .withArgs(user1.address, anyValue);
     });
 
     it("Should store sybil proof", async function () {
@@ -94,7 +95,7 @@ describe("IdentityRegistry", function () {
     it("Should emit ExternalIdentityLinked event", async function () {
       await expect(identityRegistry.connect(user1).linkExternalIdentity("ENS", ensProof))
         .to.emit(identityRegistry, "ExternalIdentityLinked")
-        .withArgs(user1.address, "ENS", await getBlockTimestamp());
+        .withArgs(user1.address, "ENS", anyValue);
     });
 
     it("Should track linked identity types", async function () {

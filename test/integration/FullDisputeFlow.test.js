@@ -7,8 +7,8 @@ const { ethers } = require("hardhat");
  * Tests the complete lifecycle of a dispute from contract creation
  * through resolution and enforcement.
  */
-// TODO: Update integration tests for current contract signatures
-describe.skip("Integration: Full Dispute Flow", function () {
+describe("Integration: Full Dispute Flow", function () {
+  this.timeout(60000); // 1 minute timeout
   let vjToken;
   let identityRegistry;
   let reputationScoring;
@@ -106,6 +106,10 @@ describe.skip("Integration: Full Dispute Flow", function () {
     const ENFORCEMENT_ROLE = await escrowVault.ENFORCEMENT_ROLE();
     await escrowVault.grantRole(ENFORCEMENT_ROLE, await enforcementEngine.getAddress());
 
+    // Grant SYSTEM_ROLE to DisputeResolution so it can mark contracts as disputed
+    const SYSTEM_ROLE = await contractFactory.SYSTEM_ROLE();
+    await contractFactory.grantRole(SYSTEM_ROLE, await disputeResolution.getAddress());
+
     // Setup arbitrator with stake
     await vjToken.mint(arbitrator.address, STAKE_AMOUNT);
     await vjToken.connect(arbitrator).approve(await courtRegistry.getAddress(), STAKE_AMOUNT);
@@ -137,7 +141,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       const tx = await contractFactory.connect(partyA).createContract(
         1, // template ID
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE // escrowRequired
       );
       const receipt = await tx.wait();
 
@@ -155,7 +160,7 @@ describe.skip("Integration: Full Dispute Flow", function () {
 
       // Contract should be active
       const contract = await contractFactory.getContract(contractId);
-      expect(contract.status).to.equal(2); // Active
+      expect(contract.state).to.equal(2); // Active
     });
 
     it("Should deposit escrow and file dispute", async function () {
@@ -163,7 +168,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
       contractId = 1n;
       await contractFactory.connect(partyA).signContract(contractId);
@@ -190,7 +196,7 @@ describe.skip("Integration: Full Dispute Flow", function () {
 
       // Contract should be disputed
       const contract = await contractFactory.getContract(contractId);
-      expect(contract.status).to.equal(3); // Disputed
+      expect(contract.state).to.equal(3); // Disputed
     });
 
     it("Should submit evidence and ruling", async function () {
@@ -198,7 +204,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
       contractId = 1n;
       await contractFactory.connect(partyA).signContract(contractId);
@@ -227,18 +234,14 @@ describe.skip("Integration: Full Dispute Flow", function () {
       // Arbitrator submits ruling (partyA wins, gets escrow)
       await disputeResolution.connect(arbitrator).submitRuling(
         disputeId,
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["address", "uint256", "string"],
-          [partyA.address, CONTRACT_VALUE, "Service was delivered as agreed"]
-        ),
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["string"],
-          ["Release escrow to creditor"]
-        )
+        partyA.address,
+        CONTRACT_VALUE,
+        ethers.toUtf8Bytes("Release escrow to creditor")
       );
 
       const dispute = await disputeResolution.getDispute(disputeId);
-      expect(dispute.status).to.equal(3); // Ruling status
+      expect(dispute.state).to.equal(2); // Still in Ruling state until finalized
+      expect(dispute.hasRuling).to.be.true; // Ruling has been submitted
     });
 
     it("Should finalize dispute and create enforcement", async function () {
@@ -246,7 +249,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
       contractId = 1n;
       await contractFactory.connect(partyA).signContract(contractId);
@@ -265,14 +269,9 @@ describe.skip("Integration: Full Dispute Flow", function () {
 
       await disputeResolution.connect(arbitrator).submitRuling(
         disputeId,
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["address", "uint256", "string"],
-          [partyA.address, CONTRACT_VALUE, "Service was delivered as agreed"]
-        ),
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["string"],
-          ["Release escrow to creditor"]
-        )
+        partyA.address,
+        CONTRACT_VALUE,
+        ethers.toUtf8Bytes("Release escrow to creditor")
       );
 
       // Fast forward past appeal period
@@ -280,17 +279,13 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await ethers.provider.send("evm_mine");
 
       // Finalize dispute
-      await disputeResolution.finalizeRuling(disputeId);
+      await disputeResolution.finalizeDispute(disputeId);
 
       const dispute = await disputeResolution.getDispute(disputeId);
-      expect(dispute.status).to.equal(4); // Finalized
+      expect(dispute.state).to.equal(3); // Finalized
 
       // Create enforcement action
-      await enforcementEngine.createEnforcementAction(
-        disputeId,
-        partyA.address,
-        CONTRACT_VALUE
-      );
+      await enforcementEngine.createEnforcement(disputeId);
 
       const action = await enforcementEngine.getActionByDispute(disputeId);
       expect(action).to.not.equal(0);
@@ -301,7 +296,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
       contractId = 1n;
 
@@ -334,27 +330,18 @@ describe.skip("Integration: Full Dispute Flow", function () {
       // Submit ruling
       await disputeResolution.connect(arbitrator).submitRuling(
         disputeId,
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["address", "uint256", "string"],
-          [partyA.address, CONTRACT_VALUE, "Service was delivered as agreed"]
-        ),
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["string"],
-          ["Release escrow to creditor"]
-        )
+        partyA.address,
+        CONTRACT_VALUE,
+        ethers.toUtf8Bytes("Release escrow to creditor")
       );
 
       // Finalize
       await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine");
-      await disputeResolution.finalizeRuling(disputeId);
+      await disputeResolution.finalizeDispute(disputeId);
 
       // Create enforcement
-      await enforcementEngine.createEnforcementAction(
-        disputeId,
-        partyA.address,
-        CONTRACT_VALUE
-      );
+      await enforcementEngine.createEnforcement(disputeId);
 
       // Check reputation was updated
       const partyAScores = await reputationScoring.getScores(partyA.address);
@@ -362,7 +349,7 @@ describe.skip("Integration: Full Dispute Flow", function () {
 
       // Verify dispute is finalized
       const dispute = await disputeResolution.getDispute(disputeId);
-      expect(dispute.status).to.equal(4); // Finalized
+      expect(dispute.state).to.equal(3); // Finalized
     });
   });
 
@@ -371,7 +358,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
 
       const rawData = await reputationScoring.getRawData(partyA.address);
@@ -382,7 +370,8 @@ describe.skip("Integration: Full Dispute Flow", function () {
       await contractFactory.connect(partyA).createContract(
         1,
         ethers.keccak256(ethers.toUtf8Bytes("contract-params")),
-        [partyA.address, partyB.address]
+        [partyA.address, partyB.address],
+        CONTRACT_VALUE
       );
       await contractFactory.connect(partyA).signContract(1);
       await contractFactory.connect(partyB).signContract(1);
