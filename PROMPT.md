@@ -214,3 +214,32 @@ When Phase 4 is complete and all tests pass, output:
 ```
 <promise>PHASE 4 COMPLETE</promise>
 ```
+
+## Phase 5: Oracle & Legacy Integration (after Phase 4 passes)
+
+### 20. OracleRegistry.sol
+- `registerOracle(address oracle, string metadata, uint256 stake)` - register as oracle
+- `updateOracleMetadata(uint256 oracleId, string metadata)`
+- `slashOracle(uint256 oracleId, uint256 amount, string reason)` - governance only
+- `deactivateOracle(uint256 oracleId)` - self or governance
+- `getOracle(uint256 oracleId) → OracleInfo`
+- `listActiveOracles() → OracleInfo[]`
+- `submitAttestation(uint256 bountyId, bytes32 attestationHash)` - oracle attests to recovery
+- `getAttestations(uint256 bountyId) → Attestation[]`
+- `hasQuorum(uint256 bountyId) → bool` - 3-of-5 oracles required
+- Oracles must stake VJ tokens to participate
+
+### 21. LegacyCourtBridge.sol
+- `registerJurisdiction(string name, bytes32 verificationKey)` - governance only
+- `submitJudgment(uint256 bountyId, bytes judgment, bytes32 jurisdictionId)`
+- `verifyJudgment(uint256 submissionId) → bool`
+- `challengeJudgment(uint256 submissionId, bytes evidence)` - dispute period
+- `finalizeJudgment(uint256 submissionId)`
+- `getJudgment(uint256 submissionId) → JudgmentInfo`
+- Bridge between traditional legal system and on-chain enforcement
+- Supports multiple jurisdictions with different verification methods
+
+When Phase 5 is complete and all tests pass, output:
+```
+<promise>PHASE 5 COMPLETE</promise>
+```
