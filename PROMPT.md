@@ -148,6 +148,51 @@ Phase 2 complete when:
 - All Phase 2 tests pass
 - Full integration tests pass
 
+## Phase 3: Enforcement & Exclusion (after Phase 2 passes)
+
+### 16. ExclusionRegistry.sol
+- `addToRegistry(address, bytes32 rulingHash, string reason)` - only governance
+- `removeFromRegistry(address)` - only governance (DAO vote)
+- `isExcluded(address) → bool`
+- `getExclusionRecord(address) → ExclusionInfo`
+- Permanent exclusion records for non-compliance
+
+### 17. BountyMarket.sol
+- `createBounty(uint256 rulingId, uint256 amount, uint256 deadline)`
+- `claimBounty(uint256 bountyId, ProofType proofType, bytes proof)`
+- `verifyOracleAttestation(uint256 bountyId, bytes[] attestations)`
+- `verifyLegacyCourtJudgment(uint256 bountyId, bytes judgment)`
+- `verifyDebtorConfirmation(uint256 bountyId, bytes signature)`
+- `disputeBountyClaim(uint256 bountyId, bytes evidence)`
+- Bounty verification priority: Oracle → Legacy courts → Debtor confirmation
+
+## Phase 4: Governance & Anchoring (after Phase 3 passes)
+
+### 18. VJGovernor.sol
+- OpenZeppelin Governor with constitutional constraints
+- `propose(targets[], values[], calldatas[], description)`
+- `castVote(uint256 proposalId, uint8 support)`
+- `execute(targets[], values[], calldatas[], descriptionHash)`
+- FORBIDDEN FUNCTIONS (structurally cannot be called):
+  - No "define crimes" function
+  - No override signed contracts function
+  - No grant immunity function
+  - No compel participation function
+- ALLOWED FUNCTIONS:
+  - `upgradeProtocol(address newImplementation)`
+  - `updateFeeParameters(bytes params)`
+  - `pauseProtocol()` - emergency only, timebound
+  - `updateRegistryRequirements(bytes params)`
+- Integration with ExclusionRegistry for add/remove
+- Governance parameters: 1% proposal threshold, 7 day voting, 48h timelock, 10% quorum
+
+### 19. RulingAnchor.sol
+- `anchorRuling(uint256 disputeId, bytes32 rulingHash)`
+- `verifyAnchor(uint256 disputeId, bytes32 rulingHash) → bool`
+- `getAnchor(uint256 disputeId) → AnchorInfo`
+- Mainnet anchoring of final rulings for permanence
+- Cross-L2 verification support
+
 ## Output
 
 When Phase 1 is complete and all tests pass, output:
@@ -158,4 +203,14 @@ When Phase 1 is complete and all tests pass, output:
 When Phase 2 is complete and all tests pass, output:
 ```
 <promise>PHASE 2 COMPLETE</promise>
+```
+
+When Phase 3 is complete and all tests pass, output:
+```
+<promise>PHASE 3 COMPLETE</promise>
+```
+
+When Phase 4 is complete and all tests pass, output:
+```
+<promise>PHASE 4 COMPLETE</promise>
 ```
