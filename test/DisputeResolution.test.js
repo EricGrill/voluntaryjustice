@@ -62,7 +62,8 @@ describe("DisputeResolution", function () {
       owner.address,
       await contractFactory.getAddress(),
       await courtRegistry.getAddress(),
-      await reputationScoring.getAddress()
+      await reputationScoring.getAddress(),
+      await vjToken.getAddress()
     );
     await disputeResolution.waitForDeployment();
 
@@ -340,8 +341,15 @@ describe("DisputeResolution", function () {
         .withArgs(1);
     });
 
-    it("Should mark contract as completed", async function () {
+    it("Should mark contract as completed after appeal period", async function () {
       await disputeResolution.finalizeDispute(1);
+
+      // Wait for appeal period to pass
+      const APPEAL_PERIOD = 7 * 24 * 60 * 60; // 7 days
+      await time.increase(APPEAL_PERIOD + 1);
+
+      // Now permanently finalize
+      await disputeResolution.finalizeDisputePermanently(1);
 
       const contract = await contractFactory.getContract(1);
       expect(contract.state).to.equal(4); // Completed
