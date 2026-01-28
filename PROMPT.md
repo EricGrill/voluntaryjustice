@@ -1,10 +1,12 @@
-# Aegis Smart Contract Implementation
+# VoluntaryJustice Smart Contract Implementation
 
-You are building the Aegis Polycentric Justice DAO smart contracts.
+You are building the VoluntaryJustice Polycentric Justice DAO smart contracts.
+Domain: voluntaryjustice.com
 
 ## Architecture Reference
 
 See `docs/plans/2026-01-28-aegis-architecture-design.md` for full architecture.
+(Note: Design doc uses working name "Aegis" - the project is now called VoluntaryJustice)
 
 ## Current Phase
 
@@ -14,12 +16,12 @@ Check `PROGRESS.md` to see current status. If it doesn't exist, start with Phase
 
 Build these contracts in order:
 
-### 1. AegisToken.sol
+### 1. VJToken.sol
 - ERC-20 token with staking hooks
 - Minting controlled by governance
-- 18 decimals, symbol: AEGIS
+- 18 decimals, symbol: VJ
 
-### 2. AegisIdentityRegistry.sol
+### 2. IdentityRegistry.sol
 - `registerIdentity(address, bytes sybilProof)` - register new identity
 - `linkExternalIdentity(address, string identityType, bytes proof)` - link ENS, EAS, etc.
 - `getIdentity(address) → IdentityProfile` - get identity info
@@ -53,7 +55,7 @@ Build these contracts in order:
 - `listCourts() → CourtInfo[]`
 - `slashCourt(uint256 courtId, uint256 amount, string reason)` - only by governance
 - `withdrawStake(uint256 courtId)` - 14 day timelock
-- Courts must stake AEGIS tokens
+- Courts must stake VJ tokens
 
 ### 7. DisputeResolution.sol
 - `fileDispute(uint256 contractId, string claim, bytes32 evidenceHash) → uint256 disputeId`

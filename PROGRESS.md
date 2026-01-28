@@ -1,4 +1,4 @@
-# Aegis Implementation Progress
+# VoluntaryJustice Implementation Progress
 
 ## Current Phase: 1 (Core MVP)
 
@@ -6,8 +6,8 @@
 
 | Contract | Status | Tests |
 |----------|--------|-------|
-| AegisToken.sol | Not started | - |
-| AegisIdentityRegistry.sol | Not started | - |
+| VJToken.sol | Not started | - |
+| IdentityRegistry.sol | Not started | - |
 | ReputationScoring.sol | Not started | - |
 | ContractTemplateRegistry.sol | Not started | - |
 | ContractFactory.sol | Not started | - |
@@ -33,3 +33,8 @@
 - Project initialized
 - Hardhat configured
 - Ready to begin Phase 1
+
+### Iteration 1
+- Renamed project from Aegis to VoluntaryJustice
+- Token renamed from AEGIS to VJ
+- Contract prefixes updated
