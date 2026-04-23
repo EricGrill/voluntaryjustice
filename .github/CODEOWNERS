@@ -1,0 +1,6 @@
+# Global owners
+* @EricGrill
+
+# Smart contracts require additional scrutiny
+/contracts/ @EricGrill
+/scripts/ @EricGrill
