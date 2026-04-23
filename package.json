@@ -1,7 +1,24 @@
 {
   "name": "voluntaryjustice",
   "version": "1.0.0",
-  "description": "",
+  "description": "Decentralized dispute resolution protocol for voluntary, contract-based justice.",
+  "author": "Eric Grill <eric@ericgrill.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EricGrill/voluntaryjustice.git"
+  },
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "smart-contracts",
+    "dispute-resolution",
+    "justice",
+    "dao",
+    "governance",
+    "hardhat",
+    "openzeppelin"
+  ],
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -9,14 +26,19 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "clean": "hardhat clean"
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "coverage": "hardhat coverage",
+    "clean": "hardhat clean",
+    "lint:sol": "solhint 'contracts/**/*.sol'",
+    "deploy:localhost": "hardhat run scripts/deploy-full.js --network localhost",
+    "deploy:testnet": "hardhat run scripts/deploy-testnet.js --network sepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy-mainnet.js --network mainnet",
+    "verify": "hardhat verify"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^2.28.4",
+    "solhint": "^5.0.0",
     "solidity-coverage": "^0.8.17"
   },
   "dependencies": {
