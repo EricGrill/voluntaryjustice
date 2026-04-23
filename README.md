@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)](https://soliditylang.org/)
 [![Tests](https://img.shields.io/badge/Tests-624%20passing-brightgreen)]()
+[![CI](https://github.com/EricGrill/voluntaryjustice/actions/workflows/ci.yml/badge.svg)](https://github.com/EricGrill/voluntaryjustice/actions)
 [![Status](https://img.shields.io/badge/Status-Ready%20for%20Deployment-success)]()
 
 ---
@@ -290,7 +291,9 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 
 ## Contributing
 
-Contributions welcome. Please read the architecture document before submitting PRs.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, smart contract guidelines, and the PR process.
+
+For security issues, see [SECURITY.md](SECURITY.md).
 
 ---
 
