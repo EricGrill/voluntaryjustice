@@ -1,29 +1,44 @@
-# VoluntaryJustice Security Audit Report
+# VoluntaryJustice Security Review
 
-**Date:** 2026-01-28
+**Date:** 2026-01-28 (last reconciled 2026-06-20)
 **Version:** 1.0.0
-**Auditor:** Internal Review
-**Status:** Pre-External Audit
+**Reviewer:** Internal Review
+**Status:** Internal review only — **no external audit has been performed**
+
+> ⚠️ This is a self-conducted internal review of a working draft. It is **not** an external
+> security audit and confers no assurance of production readiness. The protocol has not been
+> deployed to any network and must not be used with real funds.
 
 ---
 
 ## Executive Summary
 
-This document presents the internal security review of the VoluntaryJustice protocol smart contracts. The review covers 24 Solidity contracts implementing a decentralized dispute resolution system.
+This document records the internal security review of the VoluntaryJustice protocol smart
+contracts. The codebase consists of **22 production Solidity contracts** (plus one test mock)
+implementing a decentralized dispute resolution system, compiled with **Solidity 0.8.25**
+(Cancun EVM target, optimizer enabled at 200 runs).
 
-### Test Coverage
+### Test Coverage (measured via `solidity-coverage`)
 
 | Metric | Coverage |
 |--------|----------|
-| Statements | 84.70% |
-| Branches | 59.94% |
-| Functions | 89.08% |
-| Lines | 85.38% |
-| Tests Passing | 624 |
+| Statements | 95.37% |
+| Branches | 74.23% |
+| Functions | 96.93% |
+| Lines | 96.21% |
+| Tests Passing | 742 (0 pending) |
+
+The core dispute, governance, and insurance contracts have been raised to 80%+ branch coverage
+(see M-01). Overall branch coverage is still **below the 80% target** because several
+remaining contracts (BountyMarket, EnforcementEngine, CrossChainBridge, and others) are not yet
+covered. Raising those is tracked as required work before any external audit.
 
 ---
 
 ## Contracts Reviewed
+
+All 22 production contracts under `contracts/` were reviewed. (The directory also contains
+`contracts/mocks/MockVRFCoordinator.sol`, a test-only mock that is not part of the protocol.)
 
 ### Phase 1: Core MVP
 - VJToken.sol
@@ -47,64 +62,100 @@ This document presents the internal security review of the VoluntaryJustice prot
 - ExclusionRegistry.sol
 - BountyMarket.sol
 
-### Phase 4: Governance
-- VJGovernor.sol
-- GovernorTimelock.sol (OpenZeppelin)
-- ConstitutionalConstraints.sol
-- EmergencyMultisig.sol
-- ParameterRegistry.sol
+### Phase 4: Governance & Anchoring
+- VJGovernor.sol (OpenZeppelin Governor + `GovernorTimelockControl`; constitutional
+  constraints implemented as forbidden-selector checks inside this contract)
+- RulingAnchor.sol
 
 ### Phase 5: Oracle & Legacy
-- PriceOracle.sol
-- VRFConsumer.sol
+- OracleRegistry.sol
 - LegacyCourtBridge.sol
 
-### Phase 6: Production
-- ProxyAdmin.sol
-- UpgradeableProxy.sol
-- CircuitBreaker.sol
-- RateLimiter.sol
-- AuditLog.sol
-- ProtocolFees.sol
+### Phase 6: Cross-Chain & Randomness
+- VRFConsumer.sol (Chainlink VRF v2.5)
+- CrossChainBridge.sol
+
+---
+
+## Per-Contract Coverage
+
+| Contract | % Stmts | % Branch | % Funcs | % Lines |
+|----------|---------|----------|---------|---------|
+| IdentityRegistry | 100 | 100 | 100 | 100 |
+| ContractFactory | 100 | 81.03 | 100 | 100 |
+| ContractTemplateRegistry | 100 | 77.27 | 100 | 100 |
+| CourtRegistry | 100 | 71.43 | 100 | 100 |
+| EscrowVault | 100 | 68.75 | 100 | 100 |
+| LegacyCourtBridge | 100 | 70.00 | 100 | 100 |
+| OracleRegistry | 100 | 67.65 | 100 | 100 |
+| StakingRewards | 100 | 79.63 | 100 | 100 |
+| ReputationScoring | 96.00 | 83.33 | 100 | 100 |
+| JurorPool | 96.72 | 68.52 | 100 | 96.63 |
+| ExclusionRegistry | 95.65 | 70.83 | 100 | 90.63 |
+| VRFConsumer | 95.24 | 81.25 | 100 | 100 |
+| CrossChainBridge | 94.83 | 64.52 | 100 | 95.95 |
+| VJToken | 92.86 | 92.86 | 87.50 | 93.75 |
+| InsurerRegistry | 100 | 93.10 | 100 | 100 |
+| RulingAnchor | 82.14 | 69.23 | 83.33 | 84.21 |
+| EnforcementEngine | 78.85 | 47.14 | 90.91 | 81.16 |
+| BountyMarket | 72.41 | 47.17 | 81.25 | 76.19 |
+| InsurancePolicy | 100 | 87.88 | 100 | 100 |
+| DisputeResolution | 100 | 88.10 | 100 | 100 |
+| BaselineInsurancePool | 100 | 85.19 | 100 | 100 |
+| VJGovernor | 100 | 92.31 | 100 | 100 |
+
+> The dispute, governance, and insurance contracts above were brought to 80%+ branch coverage
+> after the initial review. `EnforcementEngine` (47%), `BountyMarket` (47%), `CrossChainBridge`
+> (65%), `JurorPool` (69%), and several view-heavy registries remain below target.
 
 ---
 
 ## Security Features Implemented
 
 ### Access Control
-- [x] OpenZeppelin AccessControl for role-based permissions
-- [x] Role hierarchy: DEFAULT_ADMIN_ROLE, GOVERNANCE_ROLE, OPERATOR_ROLE, etc.
-- [x] Two-step ownership transfer where applicable
-- [x] Role separation between governance and operations
+- [x] OpenZeppelin `AccessControl` for role-based permissions
+- [x] Distinct roles per contract (e.g. `DEFAULT_ADMIN_ROLE`, `GOVERNANCE_ROLE`,
+      `VERIFIER_ROLE`, `RELAYER_ROLE`)
+- [x] Role separation between governance and operational functions
 
 ### Reentrancy Protection
-- [x] ReentrancyGuard on all state-changing external functions
-- [x] Checks-Effects-Interactions pattern followed
-- [x] No external calls before state updates
+- [x] `ReentrancyGuard` on value-moving external functions
+- [x] Checks-Effects-Interactions pattern followed in escrow and payout paths
 
 ### Input Validation
-- [x] Zero address checks on all address parameters
-- [x] Bounds checking on numeric inputs
-- [x] Array length limits to prevent gas DoS
-- [x] Deadline validation on time-sensitive operations
+- [x] Zero-address checks on address parameters
+- [x] Bounds checks on numeric inputs in core contracts
 
 ### Economic Security
 - [x] Escrow isolation per contract
-- [x] Staking requirements for privileged roles
+- [x] Staking requirements for courts, jurors, insurers, and oracles
 - [x] Slashing mechanisms for misbehavior
-- [x] Rate limiting on sensitive operations
 
-### Emergency Controls
-- [x] Pausable contracts with PAUSER_ROLE
-- [x] Circuit breaker with automatic triggers
-- [x] Emergency multisig for critical operations
-- [x] Timelock on governance actions
+### Governance Safety
+- [x] Timelock on governance execution via `GovernorTimelockControl`
+- [x] Constitutional constraints: the Governor rejects proposals whose calldata targets
+      forbidden selectors (`defineCrime`, `overrideContract`, `grantImmunity`,
+      `compelParticipation`)
 
-### Upgrade Safety
-- [x] UUPS proxy pattern
-- [x] Storage gap reservations
-- [x] Initializer protection
-- [x] Upgrade authorization checks
+---
+
+## Not Implemented
+
+The following were previously listed as implemented but **do not exist in the codebase**.
+They remain candidates for future work and must not be assumed present:
+
+- An *enforced* global pause / circuit breaker. `VJGovernor` exposes a `pauseProtocol` /
+  `unpauseProtocol` / `isPaused` flag, but **no other contract reads it** — no contract uses
+  `Pausable` or `whenNotPaused`, so the flag currently has no effect on protocol operations
+  (see L-05)
+- Rate limiting on sensitive operations
+- A dedicated emergency multisig contract
+- A parameter registry contract
+- A standalone price-oracle contract
+- An upgrade/proxy layer (UUPS or otherwise) — **all contracts are non-upgradeable**;
+  there are no storage gaps, initializers, or proxy admin contracts
+- An immutable audit-log contract
+- A protocol-fee contract
 
 ---
 
@@ -114,9 +165,12 @@ This document presents the internal security review of the VoluntaryJustice prot
 |----------|-------|--------|
 | Critical | 0 | - |
 | High | 0 | - |
-| Medium | 2 | Acknowledged |
-| Low | 4 | Acknowledged |
+| Medium | 2 | M-02 resolved, M-01 partially resolved |
+| Low | 5 | 1 open, 4 acknowledged |
 | Informational | 6 | Noted |
+
+> "0 critical / 0 high" reflects an internal review only and should not be read as assurance.
+> An external audit is required before deployment.
 
 ---
 
@@ -125,180 +179,184 @@ This document presents the internal security review of the VoluntaryJustice prot
 ### M-01: Branch Coverage Below Target
 
 **Location:** Multiple contracts
-**Description:** Branch coverage at 59.94% is below the recommended 80% target. This means some conditional paths are not tested.
+**Description:** Overall branch coverage is 74.23%, below the 80% target. The highest-stakes
+contracts have now been remediated:
 
-**Affected Contracts:**
-- BaselineInsurancePool.sol (37.04% branch)
-- DisputeResolution.sol (38.10% branch)
-- InsurancePolicy.sol (37.88% branch)
-- VJGovernor.sol (38.46% branch)
+- VJGovernor.sol — 38.46% → **92.31%** ✅
+- DisputeResolution.sol — 38.10% → **88.10%** ✅
+- BaselineInsurancePool.sol — 37.04% → **85.19%** ✅
+- InsurancePolicy.sol — 37.88% → **87.88%** ✅
+- InsurerRegistry.sol — 58.62% → **93.10%** ✅
 
-**Recommendation:** Add tests for edge cases and error conditions in these contracts before mainnet deployment.
+Still below target and tracked for follow-up:
 
-**Status:** Acknowledged - Additional tests recommended before mainnet.
+- EnforcementEngine.sol (47.14% branch)
+- BountyMarket.sol (47.17% branch)
+- CrossChainBridge.sol (64.52% branch)
+- JurorPool.sol (68.52% branch)
+
+**Recommendation:** Continue adding edge-case and error-path tests for the remaining contracts
+before any external audit or deployment.
+
+**Status:** Partially resolved — core/governance/insurance done; others open.
 
 ---
 
 ### M-02: DisputeResolution State Coverage
 
 **Location:** DisputeResolution.sol
-**Description:** Only 55% line coverage indicates several dispute states and transitions are not fully tested.
+**Description:** The dispute engine previously had 55% line / 38% branch coverage, leaving the
+appeal flow, jury commit-reveal, and deadline handling largely untested.
 
-**Risk:** Untested state transitions could contain bugs that emerge in production.
+**Resolution:** Comprehensive state-machine tests were added covering the full dispute
+lifecycle including the appeal/jury commit-reveal path and every revert branch. DisputeResolution
+is now at 100% line / 88.10% branch.
 
-**Recommendation:** Add comprehensive state machine tests covering all dispute lifecycle transitions.
-
-**Status:** Acknowledged - State machine tests recommended.
+**Status:** Resolved.
 
 ---
 
 ## Low Severity Findings
 
-### L-01: Centralization Risk in Emergency Multisig
+### L-01: Centralization Risk in Governance Roles
 
-**Location:** EmergencyMultisig.sol
-**Description:** Emergency actions are controlled by a multisig. If signers are compromised or collude, emergency powers could be abused.
+**Location:** Multiple contracts
+**Description:** Admin and governance roles hold significant power. If admin keys are
+compromised, privileged operations could be abused. There is currently no global pause to
+contain an incident.
 
-**Mitigation:**
-- Multisig requires M-of-N signatures
-- Emergency actions are logged in AuditLog
-- Timelock delay on non-emergency governance
+**Mitigation:** Timelock on governance execution; role separation. Transferring admin roles to
+a multisig at deployment is recommended (no emergency-multisig contract exists yet).
 
-**Status:** Accepted risk with mitigations in place.
+**Status:** Acknowledged.
+
+---
+
+### L-05: Unenforced Protocol Pause
+
+**Location:** VJGovernor.sol
+**Description:** `pauseProtocol`/`unpauseProtocol` set a `paused` flag, but no other protocol
+contract reads `isPaused()`. The pause therefore does not stop disputes, escrow movement, or
+payouts — it is effectively a no-op safety control.
+
+**Recommendation:** Either wire critical contracts to check the pause flag (or adopt
+OpenZeppelin `Pausable`), or remove the flag to avoid a false sense of safety.
+
+**Status:** Open.
 
 ---
 
 ### L-02: Oracle Dependency
 
-**Location:** PriceOracle.sol, VRFConsumer.sol
-**Description:** Protocol depends on Chainlink oracles. Oracle failures or manipulation could affect dispute resolution.
+**Location:** VRFConsumer.sol, OracleRegistry.sol
+**Description:** The protocol depends on Chainlink VRF for jury randomness and on an oracle
+network for recovery attestations. Oracle failure or manipulation could affect outcomes.
 
-**Mitigation:**
-- Fallback price sources configured
-- Staleness checks on price data
-- VRF subscription properly funded
+**Mitigation:** Oracle staking, quorum thresholds, and slashing in OracleRegistry; VRF
+subscription must be funded and configured.
 
-**Status:** Accepted risk with mitigations in place.
+**Status:** Acknowledged.
 
 ---
 
 ### L-03: Legacy Court Bridge Trust Assumptions
 
 **Location:** LegacyCourtBridge.sol
-**Description:** Off-chain court rulings are imported via authorized verifiers. Malicious verifiers could submit false rulings.
+**Description:** Off-chain court rulings are imported via authorized verifiers. Malicious
+verifiers could submit false rulings.
 
-**Mitigation:**
-- Multi-verifier requirement configurable
-- Challenge period for imported rulings
-- Verifier staking and slashing
+**Mitigation:** Configurable multi-verifier requirement, challenge period, verifier staking
+and slashing.
 
-**Status:** Accepted risk with mitigations in place.
+**Status:** Acknowledged.
 
 ---
 
 ### L-04: Gas Limits on Large Arrays
 
 **Location:** Multiple contracts
-**Description:** Some functions iterate over arrays (parties, jurors, insurers). Very large arrays could hit gas limits.
+**Description:** Some functions iterate over arrays (parties, jurors, insurers). Very large
+arrays could approach block gas limits.
 
-**Mitigation:**
-- Maximum array sizes enforced
-- Pagination for list operations
-- Gas-efficient data structures
+**Mitigation:** Maximum array sizes are enforced in several contracts; review all unbounded
+loops before deployment.
 
-**Status:** Accepted with limits in place.
+**Status:** Acknowledged.
 
 ---
 
 ## Informational Findings
 
-### I-01: Consider Using Custom Errors
-Many contracts use require statements with string messages. Custom errors (Solidity 0.8.4+) are more gas efficient.
-
-### I-02: Events for All State Changes
-Ensure all state-changing functions emit events for off-chain indexing.
-
-### I-03: NatSpec Documentation
-Some functions lack complete NatSpec documentation. Add @param and @return tags.
-
-### I-04: Magic Numbers
-Some numeric constants should be extracted to named constants for clarity.
-
-### I-05: Unused Imports
-Some contracts import libraries that are not used.
-
-### I-06: Compiler Version
-Contracts use Solidity 0.8.24. Consider pinning to a specific patch version.
+- **I-01:** Many contracts use `require` with string messages; custom errors are more gas
+  efficient.
+- **I-02:** Ensure all state-changing functions emit events for off-chain indexing.
+- **I-03:** Some functions lack complete NatSpec (`@param`/`@return`).
+- **I-04:** Extract magic numbers into named constants.
+- **I-05:** Remove unused imports.
+- **I-06:** Solidity is pinned to 0.8.25; keep it pinned to an exact patch for reproducible
+  builds.
 
 ---
 
-## External Audit Recommendations
+## Required Before Deployment
 
-Before mainnet deployment, the following external audits are recommended:
+The deployment checklist's security gate is **not yet satisfied**. Outstanding items:
 
-1. **Primary Audit:** Full codebase review by a reputable firm (Trail of Bits, OpenZeppelin, Consensys Diligence)
-
-2. **Formal Verification:** Critical components (VJToken, EscrowVault, DisputeResolution)
-
-3. **Economic Audit:** Game theory review of incentive mechanisms
-
-4. **Oracle Security Review:** Chainlink integration verification
-
----
-
-## Static Analysis Tools
-
-The following tools should be run before external audit:
+1. ~~**Raise branch coverage** to 80%+ on DisputeResolution, VJGovernor, and the insurance
+   contracts; resolve the 2 pending governance tests.~~ ✅ Done. Extend the same to the
+   remaining contracts (EnforcementEngine, BountyMarket, CrossChainBridge, JurorPool).
+2. **Run static analysis** (Slither, Mythril) and triage findings. *(Not yet run — requires
+   local Python/pip install.)*
+3. **Commission an external audit** by a reputable firm.
+4. **Launch a bug bounty.**
+5. **Triage dependency vulnerabilities** reported by `npm audit`.
 
 ```bash
-# Slither (install via pip)
+# Static analysis (require local installation)
 slither . --print human-summary
-
-# Mythril
 myth analyze contracts/*.sol
-
-# Solhint
 npx solhint 'contracts/**/*.sol'
 ```
 
-Note: These tools require local installation. Slither requires Python/pip.
-
 ---
 
-## Deployment Checklist
+## Deployment Checklist (gate status)
 
 ### Pre-Deployment
-- [ ] All tests passing (624/624)
-- [ ] Coverage above 80% for critical contracts
-- [ ] Static analysis clean (no high/critical)
+- [x] All tests passing (742/742, 0 pending)
+- [x] Branch coverage above 80% for core/insurance/governance contracts
+- [ ] Branch coverage above 80% for all remaining contracts
+- [ ] Static analysis run and clean
 - [ ] External audit complete
-- [ ] Bug bounty program launched
+- [ ] Bug bounty launched
 
 ### Deployment
 - [ ] Deploy to testnet first
 - [ ] Verify all contracts on Etherscan
 - [ ] Test all user flows on testnet
 - [ ] Deploy to mainnet
-- [ ] Transfer ownership to multisig
+- [ ] Transfer admin/governance roles to a multisig
 - [ ] Initialize governance
 
 ### Post-Deployment
-- [ ] Monitor for anomalies
+- [ ] Monitoring and alerting in place
 - [ ] Incident response plan ready
-- [ ] Upgrade path tested
 
 ---
 
 ## Conclusion
 
-The VoluntaryJustice protocol demonstrates good security practices with comprehensive access control, reentrancy protection, and emergency mechanisms. The internal review identified no critical or high severity issues.
+The protocol implements solid baseline practices — role-based access control, reentrancy
+guards, staking/slashing economics, a governance timelock, and constitutional constraints in
+the Governor. The core dispute, governance, and insurance contracts have been brought to 80%+
+branch coverage. However, this is an **internal review of an unaudited draft**, overall branch
+coverage is still below target (several contracts remain untested), and several security
+features previously claimed in documentation are **not present in the code**.
 
-**Recommendations:**
-1. Increase branch coverage to 80%+ before mainnet
-2. Complete external security audit
-3. Launch bug bounty program
-4. Deploy to testnet for extended testing period
+**An external audit, increased test coverage, and static analysis are required before any
+production deployment.**
 
 ---
 
-*This report is for informational purposes. A formal external audit is required before production deployment.*
+*This report documents an internal review only. A formal external audit is required before
+production deployment.*

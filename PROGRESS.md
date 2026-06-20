@@ -54,7 +54,11 @@
 | VRFConsumer.sol | Complete | 17 passing |
 | CrossChainBridge.sol | Complete | 29 passing |
 
-**Total: 624 tests passing (2 governance tests pending)**
+**Total: 742 tests passing (0 pending)**
+
+Coverage: 95.4% statements / 74.2% branches / 96.2% lines (overall). The core dispute,
+governance, and insurance contracts were raised to 80%+ branch coverage; the 2 previously
+pending governance lifecycle tests are now active.
 
 ## Iteration Log
 
@@ -129,6 +133,16 @@
 - All 560 tests passing
 - Compilation: 0 errors
 - **PHASE 5 COMPLETE**
+
+### Iteration 9
+- Reconciled all documentation (README, SECURITY_AUDIT.md, DEPLOYMENT_CHECKLIST.md) with the
+  actual 22-contract codebase; removed references to contracts that were never implemented.
+- Resolved the 2 pending governance lifecycle tests (fast block mining instead of per-block loops).
+- Raised branch coverage to 80%+ on the core/governance/insurance contracts:
+  - DisputeResolution 38% → 88% (added full appeal/jury commit-reveal coverage)
+  - VJGovernor 38% → 92%
+  - BaselineInsurancePool 37% → 85%, InsurancePolicy 38% → 88%, InsurerRegistry 59% → 93%
+- All 742 tests passing, 0 pending. Overall: 95.4% stmts / 74.2% branches / 96.2% lines.
 
 ### Iteration 8
 - Implemented Phase 6 (Production Readiness) contracts:

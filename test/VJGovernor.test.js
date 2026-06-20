@@ -212,6 +212,41 @@ describe("VJGovernor", function () {
     });
   });
 
+  describe("Proposal edge cases", function () {
+    it("Should allow a proposal whose calldata is shorter than 4 bytes", async function () {
+      // Exercises the `calldatas[i].length >= 4` false branch in propose()
+      await time.increase(1);
+      const tx = await vjGovernor.connect(voter1).propose(
+        [user.address],
+        [0],
+        ["0x"],
+        "Empty-calldata proposal"
+      );
+      const receipt = await tx.wait();
+      expect(receipt.status).to.equal(1);
+    });
+
+    it("Should let the proposer cancel a pending proposal", async function () {
+      await time.increase(1);
+      const targets = [await vjGovernor.getAddress()];
+      const values = [0];
+      const calldatas = [vjGovernor.interface.encodeFunctionData("updateFeeParameters", [1, 2, 3])];
+      const description = "Cancellable proposal";
+
+      const tx = await vjGovernor.connect(voter1).propose(targets, values, calldatas, description);
+      const proposalId = (await tx.wait()).logs.find(
+        log => log.fragment && log.fragment.name === "ProposalCreated"
+      ).args[0];
+
+      // Pending (0) -> cancel by proposer
+      expect(await vjGovernor.state(proposalId)).to.equal(0);
+      await vjGovernor.connect(voter1).cancel(targets, values, calldatas, ethers.keccak256(ethers.toUtf8Bytes(description)));
+
+      // Canceled (2)
+      expect(await vjGovernor.state(proposalId)).to.equal(2);
+    });
+  });
+
   describe("ExclusionRegistry Integration", function () {
     it("Should have exclusion registry reference", async function () {
       expect(await vjGovernor.exclusionRegistry()).to.equal(await exclusionRegistry.getAddress());

@@ -3,10 +3,10 @@
 **Decentralized Dispute Resolution Protocol for Voluntary, Contract-Based Justice**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)](https://soliditylang.org/)
-[![Tests](https://img.shields.io/badge/Tests-624%20passing-brightgreen)]()
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.25-363636?logo=solidity)](https://soliditylang.org/)
+[![Tests](https://img.shields.io/badge/Tests-742%20passing-brightgreen)]()
 [![CI](https://github.com/EricGrill/voluntaryjustice/actions/workflows/ci.yml/badge.svg)](https://github.com/EricGrill/voluntaryjustice/actions)
-[![Status](https://img.shields.io/badge/Status-Ready%20for%20Deployment-success)]()
+[![Status](https://img.shields.io/badge/Status-Unaudited%20Draft-orange)]()
 
 ---
 
@@ -14,7 +14,7 @@
 
 VoluntaryJustice is a maximally on-chain dispute resolution protocol that enables individuals and organizations to resolve disputes without state courts. The system uses economic incentives, insurance, reputation, and arbitration to create a self-sustaining justice marketplace.
 
-**Status: Final Draft - Ready for Testnet Deployment**
+**Status: Working Draft — Unaudited. Not yet deployed. See [Project Status](#project-status) before using.**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -29,6 +29,24 @@ VoluntaryJustice is a maximally on-chain dispute resolution protocol that enable
 │  └───────────┘ └───────────┘ └───────────┘ └───────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Project Status
+
+This is a **working draft built for research and demonstration**. It is **not production-ready** and **has not been deployed** to any network.
+
+| Area | State |
+|------|-------|
+| Smart contracts | 22 contracts implemented; compile clean on Solidity 0.8.25 |
+| Tests | 742 passing, 0 pending; overall **74.2% branch** / 95.4% statement coverage |
+| Core coverage | `DisputeResolution` (88%), `VJGovernor` (92%), and the insurance contracts (85–93%) are now at 80%+ branch coverage |
+| Remaining coverage gaps | `BountyMarket`, `EnforcementEngine`, `CrossChainBridge`, and a few others remain below 80% branch |
+| Security | Internal review only — **no external audit, no static analysis, no bug bounty** |
+| Frontend | Next.js app wired to contract hooks, but contract addresses are unset and the root landing page is still scaffolding |
+| Deployment | Scripts exist; nothing deployed; addresses not wired into the frontend |
+
+**Do not use with real funds.** See the [Internal Security Review](docs/security/SECURITY_AUDIT.md) for known gaps.
 
 ---
 
@@ -77,31 +95,27 @@ VoluntaryJustice is a maximally on-chain dispute resolution protocol that enable
 | `ExclusionRegistry.sol` | Permanent exclusion records for non-compliance |
 | `BountyMarket.sol` | Recovery bounties with oracle/court/debtor verification |
 
-### Phase 4: Governance
+### Phase 4: Governance & Anchoring
 | Contract | Purpose |
 |----------|---------|
-| `VJGovernor.sol` | OpenZeppelin Governor with timelock |
-| `GovernorTimelock.sol` | Timelock controller for governance actions |
-| `ConstitutionalConstraints.sol` | Parameter bounds and invariant protection |
-| `EmergencyMultisig.sol` | Emergency pause/unpause with multi-sig |
-| `ParameterRegistry.sol` | Centralized protocol configuration |
+| `VJGovernor.sol` | OpenZeppelin Governor with built-in timelock (`GovernorTimelockControl`) and constitutional constraints (forbidden-selector checks that block defining crimes, overriding contracts, granting immunity, or compelling participation) |
+| `RulingAnchor.sol` | Anchors final dispute rulings for cross-layer reference |
 
 ### Phase 5: Oracle & Legacy Integration
 | Contract | Purpose |
 |----------|---------|
-| `PriceOracle.sol` | Chainlink price feeds with fallback |
-| `VRFConsumer.sol` | Chainlink VRF for random jury selection |
-| `LegacyCourtBridge.sol` | Off-chain ruling imports with verification |
+| `OracleRegistry.sol` | Trusted oracle network for recovery attestations (staking, quorum, slashing) |
+| `LegacyCourtBridge.sol` | Off-chain court ruling imports with multi-jurisdiction support and a challenge period |
 
-### Phase 6: Production Readiness
+### Phase 6: Cross-Chain & Randomness
 | Contract | Purpose |
 |----------|---------|
-| `ProxyAdmin.sol` | Upgrade administration |
-| `UpgradeableProxy.sol` | UUPS proxy pattern |
-| `CircuitBreaker.sol` | Automated emergency response |
-| `RateLimiter.sol` | Transaction rate limiting |
-| `AuditLog.sol` | Immutable action logging |
-| `ProtocolFees.sol` | Fee collection and distribution |
+| `VRFConsumer.sol` | Chainlink VRF v2.5 consumer for random jury selection |
+| `CrossChainBridge.sol` | L2 ↔ mainnet messaging for ruling anchoring (Arbitrum, Optimism, Base) |
+
+> A `MockVRFCoordinator.sol` mock lives under `contracts/mocks/` for testing VRF flows.
+
+**Total: 22 production contracts.**
 
 ---
 
@@ -110,7 +124,7 @@ VoluntaryJustice is a maximally on-chain dispute resolution protocol that enable
 A complete Next.js frontend application is included in the `frontend/` directory.
 
 ### Tech Stack
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Wallet:** RainbowKit + wagmi v2
 - **Styling:** shadcn/ui + Tailwind CSS
 - **State:** TanStack Query
@@ -184,14 +198,14 @@ npx hardhat compile
 
 ```bash
 npm test
-# 624 tests passing
+# 742 tests passing
 ```
 
 ### Deploy to Local Network
 
 ```bash
 npx hardhat node
-npx hardhat run scripts/deploy.js --network localhost
+npx hardhat run scripts/deploy-full.js --network localhost
 ```
 
 ### Deploy to Testnet
@@ -201,8 +215,10 @@ npx hardhat run scripts/deploy.js --network localhost
 export SEPOLIA_RPC_URL=<your-rpc-url>
 export PRIVATE_KEY=<deployer-private-key>
 
-npx hardhat run scripts/deploy.js --network sepolia
+npx hardhat run scripts/deploy-testnet.js --network sepolia
 ```
+
+> Deploy scripts write the resulting addresses to `deployments/<network>-latest.json`. The frontend's `frontend/lib/contracts/addresses.ts` is not yet auto-populated — addresses must currently be copied in manually.
 
 ---
 
@@ -248,8 +264,8 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 | Arbitration | Tiered (single + jury appeal) |
 | Enforcement | Court-directed escalation |
 | Insurance | Protocol baseline + open market |
-| Governance | OpenZeppelin Governor + Timelock |
-| Upgrades | UUPS Proxy Pattern |
+| Governance | OpenZeppelin Governor + built-in Timelock |
+| Upgrades | Non-upgradeable (contracts are immutable once deployed; no proxy layer yet) |
 
 ---
 
@@ -258,34 +274,42 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 - [x] **Phase 1** - Core MVP (Identity, Contracts, Disputes, Escrow)
 - [x] **Phase 2** - Insurance & Appeals (Jury, Insurance, Enforcement)
 - [x] **Phase 3** - Bounty Market & Exclusion (ExclusionRegistry, BountyMarket)
-- [x] **Phase 4** - Governance (Governor, Timelock, Constraints, Emergency)
-- [x] **Phase 5** - Oracle & Legacy Integration (Chainlink, VRF, Legacy Bridge)
-- [x] **Phase 6** - Production Readiness (Upgrades, Circuit Breaker, Audit Log)
+- [x] **Phase 4** - Governance & Anchoring (Governor with timelock + constitutional constraints, RulingAnchor)
+- [x] **Phase 5** - Oracle & Legacy Integration (OracleRegistry, LegacyCourtBridge)
+- [x] **Phase 6** - Cross-Chain & Randomness (VRFConsumer, CrossChainBridge)
 - [x] **Phase 7** - Frontend Application (Next.js, RainbowKit, shadcn/ui)
-- [x] **Phase 8** - Security Audit (Internal review, coverage reports)
-- [x] **Phase 9** - Testnet Deployment (Scripts, verification, documentation)
-- [x] **Phase 10** - Mainnet Preparation (Deployment checklist, configuration)
+- [x] **Phase 8** - Internal review & coverage reports
+- [x] **Phase 9** - Core/governance/insurance contracts raised to 80%+ branch coverage
+- [ ] **Phase 10** - Raise remaining contracts (BountyMarket, EnforcementEngine, …) to 80%+ branch
+- [ ] **Phase 11** - External security audit + bug bounty
+- [ ] **Phase 12** - Testnet deployment & full user-flow testing
+- [ ] **Phase 13** - Mainnet preparation
 
 ---
 
 ## Security
 
 ### Audit Status
-- [x] Internal security review complete
-- [x] Test coverage: 84.7% statements, 85.4% lines
-- [ ] External security audit pending
+- [x] Internal review only (not an external audit)
+- [x] Test coverage: 95.4% statements, 74.2% branches, 96.2% lines (full table in the audit report)
+- [x] Branch coverage on core/insurance/governance contracts raised to 80%+
+- [ ] Branch coverage on remaining contracts (BountyMarket, EnforcementEngine, CrossChainBridge, …) below 80%
+- [ ] External security audit — **not started**
+- [ ] Static analysis (Slither/Mythril) — not yet run
+- [ ] Bug bounty — not launched
 
 ### Security Documentation
-- [Security Audit Report](docs/security/SECURITY_AUDIT.md)
+- [Internal Security Review](docs/security/SECURITY_AUDIT.md)
 - [Deployment Checklist](docs/security/DEPLOYMENT_CHECKLIST.md)
 
-### Security Features
+### Security Features (implemented in code)
 - Role-based access control (OpenZeppelin AccessControl)
-- Reentrancy guards on all state-changing functions
-- Circuit breaker for emergency pause
-- Rate limiting on sensitive operations
-- Timelock on governance actions
-- Multi-sig emergency controls
+- Reentrancy guards on state-changing functions
+- Timelock on governance actions (OpenZeppelin `GovernorTimelockControl`)
+- Constitutional constraints in the Governor (forbidden-selector checks)
+- Staking + slashing for courts, jurors, insurers, and oracles
+
+> Not yet implemented (despite being on the roadmap): an *enforced* global pause / circuit breaker (the Governor has a `paused` flag, but no other contract reads it), rate limiting, a dedicated emergency-multisig contract, and an upgrade/proxy layer.
 
 ---
 

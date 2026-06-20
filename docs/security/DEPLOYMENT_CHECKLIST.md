@@ -3,10 +3,12 @@
 ## Pre-Deployment Requirements
 
 ### Code Quality
-- [x] All 624 tests passing
-- [x] Test coverage: 84.7% statements, 85.4% lines
-- [x] Code compiled without warnings
-- [x] ESLint/Solhint checks passed
+- [x] 742 tests passing (0 pending)
+- [x] Test coverage: 95.4% statements, 74.2% branches, 96.2% lines
+- [x] Code compiles without warnings (Solidity 0.8.25)
+- [x] Branch coverage 80%+ on core/insurance/governance contracts
+- [ ] Branch coverage 80%+ on remaining contracts (BountyMarket, EnforcementEngine, …)
+- [ ] Static analysis (Slither/Mythril) run and clean
 - [ ] External security audit completed
 - [ ] Bug bounty program established
 
@@ -40,69 +42,65 @@ export CHAINLINK_VRF_KEY_HASH="0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e5
 
 ### Deployment Order
 
-#### Step 1: Core Infrastructure
+This mirrors `scripts/deploy-full.js`. Run it with `npx hardhat run scripts/deploy-full.js
+--network <network>`; the steps below are for manual verification.
+
+#### Phase 1: Core Infrastructure
 1. [ ] Deploy VJToken
 2. [ ] Deploy IdentityRegistry
 3. [ ] Deploy ReputationScoring
-4. [ ] Deploy ParameterRegistry
 
-#### Step 2: Contract System
-5. [ ] Deploy ContractTemplateRegistry
-6. [ ] Deploy EscrowVault
-7. [ ] Deploy ContractFactory
+#### Phase 2: Contract System
+4. [ ] Deploy ContractTemplateRegistry
+5. [ ] Deploy EscrowVault
+6. [ ] Deploy ContractFactory (→ ContractTemplateRegistry, ReputationScoring)
 
-#### Step 3: Court System
-8. [ ] Deploy CourtRegistry
-9. [ ] Deploy JurorPool
-10. [ ] Deploy VRFConsumer
-11. [ ] Deploy DisputeResolution
+#### Phase 3: Court System
+7. [ ] Deploy CourtRegistry (→ VJToken)
+8. [ ] Deploy JurorPool (→ VJToken)
+9. [ ] Deploy StakingRewards (→ VJToken)
+10. [ ] Deploy DisputeResolution (→ ContractFactory, CourtRegistry, ReputationScoring, VJToken)
 
-#### Step 4: Enforcement
-12. [ ] Deploy EnforcementEngine
-13. [ ] Deploy ExclusionRegistry
-14. [ ] Deploy BountyMarket
+#### Phase 4: Insurance
+11. [ ] Deploy BaselineInsurancePool (→ VJToken, DisputeResolution)
+12. [ ] Deploy InsurerRegistry (→ VJToken)
+13. [ ] Deploy InsurancePolicy (→ VJToken, InsurerRegistry, DisputeResolution)
 
-#### Step 5: Insurance
-15. [ ] Deploy BaselineInsurancePool
-16. [ ] Deploy InsurerRegistry
-17. [ ] Deploy InsurancePolicy
+#### Phase 5: Enforcement & Exclusion
+14. [ ] Deploy ExclusionRegistry
+15. [ ] Deploy EnforcementEngine (→ DisputeResolution, EscrowVault, ReputationScoring, BaselineInsurancePool)
+16. [ ] Deploy BountyMarket (→ VJToken, DisputeResolution)
 
-#### Step 6: Governance
-18. [ ] Deploy GovernorTimelock
-19. [ ] Deploy VJGovernor
-20. [ ] Deploy ConstitutionalConstraints
-21. [ ] Deploy EmergencyMultisig
+#### Phase 6: Governance
+17. [ ] Deploy `TimelockController` (OpenZeppelin)
+18. [ ] Deploy VJGovernor (→ VJToken, TimelockController, ExclusionRegistry)
+19. [ ] Grant the Timelock's PROPOSER_ROLE and EXECUTOR_ROLE to the Governor
 
-#### Step 7: Production Infrastructure
-22. [ ] Deploy CircuitBreaker
-23. [ ] Deploy RateLimiter
-24. [ ] Deploy AuditLog
-25. [ ] Deploy ProtocolFees
-
-#### Step 8: Oracles & Bridges
-26. [ ] Deploy PriceOracle
-27. [ ] Deploy LegacyCourtBridge
+#### Phase 7: Oracle & Bridges
+20. [ ] Deploy OracleRegistry (→ VJToken)
+21. [ ] Deploy LegacyCourtBridge
+22. [ ] Deploy RulingAnchor
+23. [ ] Deploy CrossChainBridge
+24. [ ] Deploy VRFConsumer / wire VRF (or MockVRFCoordinator on non-mainnet)
 
 ### Post-Deployment Configuration
 
 #### Role Setup
-- [ ] Grant GOVERNANCE_ROLE to Governor
-- [ ] Grant PAUSER_ROLE to EmergencyMultisig
+- [ ] Grant GOVERNANCE_ROLE to Governor/Timelock where applicable
 - [ ] Grant OPERATOR_ROLE to operations wallet
+- [ ] Transfer DEFAULT_ADMIN_ROLE to a multisig (no dedicated emergency-multisig contract exists yet)
 - [ ] Revoke deployer admin roles
 
 #### Contract Linking
-- [ ] Set DisputeResolution in ContractFactory
-- [ ] Set EnforcementEngine in DisputeResolution
-- [ ] Set InsurancePolicy in EnforcementEngine
-- [ ] Configure VRF subscription
-- [ ] Configure price feeds
+- [ ] Wire DisputeResolution into ContractFactory / EnforcementEngine as required
+- [ ] Wire EnforcementEngine into DisputeResolution
+- [ ] Wire InsurancePolicy into EnforcementEngine
+- [ ] Configure VRF subscription (VRFConsumer)
 
 #### Initial Parameters
-- [ ] Set minimum stakes (court, juror, insurer)
-- [ ] Set fee percentages
-- [ ] Set timelock delays
-- [ ] Set circuit breaker thresholds
+- [ ] Set minimum stakes (court, juror, insurer, oracle)
+- [ ] Set timelock delay
+- [ ] Set challenge / appeal periods
 
 ### Verification
 ```bash
@@ -131,8 +129,8 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 - [ ] Production fee recipients
 
 ### Post-Mainnet
-- [ ] Transfer ProxyAdmin to multisig
-- [ ] Transfer DEFAULT_ADMIN_ROLE to timelock
+- [ ] Transfer DEFAULT_ADMIN_ROLE to timelock/multisig
+> Note: contracts are non-upgradeable (no proxy layer). A redeploy + migration is required to ship fixes.
 - [ ] Announce deployment
 - [ ] Monitor first transactions closely
 - [ ] 24/7 monitoring for first week
@@ -142,9 +140,12 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 ## Rollback Plan
 
 ### If Critical Bug Found
-1. Pause all pausable contracts
+> There is currently no global pause / circuit breaker. Containment options are limited to
+> role revocation and parameter changes via governance. Adding an emergency pause is
+> recommended before mainnet.
+1. Revoke roles / freeze privileged operations where possible
 2. Assess damage and scope
-3. Prepare upgrade or migration
+3. Prepare a redeploy + state migration (contracts are immutable)
 4. Communicate with users
 5. Execute fix with governance approval
 
@@ -162,7 +163,7 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 - Gas usage patterns
 - Contract balance changes
 - Role grant/revoke events
-- Pause/unpause events
+- Governance proposal / timelock events
 - Unusual patterns (large transfers, rapid disputes)
 
 ### Alerting
