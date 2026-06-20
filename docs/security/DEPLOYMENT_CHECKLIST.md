@@ -3,11 +3,11 @@
 ## Pre-Deployment Requirements
 
 ### Code Quality
-- [x] 742 tests passing (0 pending)
-- [x] Test coverage: 95.4% statements, 74.2% branches, 96.2% lines
+- [x] 849 tests passing (0 pending)
+- [x] Test coverage: 98.8% statements, 82.3% branches, 99.1% lines
 - [x] Code compiles without warnings (Solidity 0.8.25)
-- [x] Branch coverage 80%+ on core/insurance/governance contracts
-- [ ] Branch coverage 80%+ on remaining contracts (BountyMarket, EnforcementEngine, …)
+- [x] Overall branch coverage above 80%; all high-stakes contracts at 80%+
+- [ ] Branch coverage 80%+ on remaining registry/view contracts (CourtRegistry, EscrowVault, …)
 - [ ] Static analysis (Slither/Mythril) run and clean
 - [ ] External security audit completed
 - [ ] Bug bounty program established

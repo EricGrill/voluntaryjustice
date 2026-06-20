@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.25-363636?logo=solidity)](https://soliditylang.org/)
-[![Tests](https://img.shields.io/badge/Tests-742%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-849%20passing-brightgreen)]()
 [![CI](https://github.com/EricGrill/voluntaryjustice/actions/workflows/ci.yml/badge.svg)](https://github.com/EricGrill/voluntaryjustice/actions)
 [![Status](https://img.shields.io/badge/Status-Unaudited%20Draft-orange)]()
 
@@ -39,9 +39,9 @@ This is a **working draft built for research and demonstration**. It is **not pr
 | Area | State |
 |------|-------|
 | Smart contracts | 22 contracts implemented; compile clean on Solidity 0.8.25 |
-| Tests | 742 passing, 0 pending; overall **74.2% branch** / 95.4% statement coverage |
-| Core coverage | `DisputeResolution` (88%), `VJGovernor` (92%), and the insurance contracts (85–93%) are now at 80%+ branch coverage |
-| Remaining coverage gaps | `BountyMarket`, `EnforcementEngine`, `CrossChainBridge`, and a few others remain below 80% branch |
+| Tests | 849 passing, 0 pending; overall **82.3% branch** / 98.8% statement coverage |
+| Core coverage | All high-stakes contracts (dispute, governance, insurance, enforcement, bounty, bridge, juror pool) are at 80%+ branch coverage |
+| Remaining coverage gaps | A few registry/view contracts (`CourtRegistry`, `EscrowVault`, `OracleRegistry`, `RulingAnchor`, `LegacyCourtBridge`, …) are still below 80% branch, though overall is now above target |
 | Security | Internal review only — **no external audit, no static analysis, no bug bounty** |
 | Frontend | Next.js app wired to contract hooks, but contract addresses are unset and the root landing page is still scaffolding |
 | Deployment | Scripts exist; nothing deployed; addresses not wired into the frontend |
@@ -198,7 +198,7 @@ npx hardhat compile
 
 ```bash
 npm test
-# 742 tests passing
+# 849 tests passing
 ```
 
 ### Deploy to Local Network
@@ -279,8 +279,8 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 - [x] **Phase 6** - Cross-Chain & Randomness (VRFConsumer, CrossChainBridge)
 - [x] **Phase 7** - Frontend Application (Next.js, RainbowKit, shadcn/ui)
 - [x] **Phase 8** - Internal review & coverage reports
-- [x] **Phase 9** - Core/governance/insurance contracts raised to 80%+ branch coverage
-- [ ] **Phase 10** - Raise remaining contracts (BountyMarket, EnforcementEngine, …) to 80%+ branch
+- [x] **Phase 9** - Overall branch coverage raised above 80% (all high-stakes contracts at 80%+)
+- [ ] **Phase 10** - Raise the remaining registry/view contracts to 80%+ branch
 - [ ] **Phase 11** - External security audit + bug bounty
 - [ ] **Phase 12** - Testnet deployment & full user-flow testing
 - [ ] **Phase 13** - Mainnet preparation
@@ -291,9 +291,9 @@ Full architecture design: [`docs/plans/2026-01-28-aegis-architecture-design.md`]
 
 ### Audit Status
 - [x] Internal review only (not an external audit)
-- [x] Test coverage: 95.4% statements, 74.2% branches, 96.2% lines (full table in the audit report)
-- [x] Branch coverage on core/insurance/governance contracts raised to 80%+
-- [ ] Branch coverage on remaining contracts (BountyMarket, EnforcementEngine, CrossChainBridge, …) below 80%
+- [x] Test coverage: 98.8% statements, 82.3% branches, 99.1% lines (full table in the audit report)
+- [x] Overall branch coverage above the 80% target; all high-stakes contracts at 80%+
+- [ ] A few registry/view contracts (CourtRegistry, EscrowVault, OracleRegistry, …) still below 80% branch
 - [ ] External security audit — **not started**
 - [ ] Static analysis (Slither/Mythril) — not yet run
 - [ ] Bug bounty — not launched

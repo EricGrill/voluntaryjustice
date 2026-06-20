@@ -54,11 +54,12 @@
 | VRFConsumer.sol | Complete | 17 passing |
 | CrossChainBridge.sol | Complete | 29 passing |
 
-**Total: 742 tests passing (0 pending)**
+**Total: 849 tests passing (0 pending)**
 
-Coverage: 95.4% statements / 74.2% branches / 96.2% lines (overall). The core dispute,
-governance, and insurance contracts were raised to 80%+ branch coverage; the 2 previously
-pending governance lifecycle tests are now active.
+Coverage: 98.8% statements / 82.3% branches / 99.1% lines (overall, now above the 80% branch
+target). All high-stakes contracts (dispute, governance, insurance, enforcement, bounty,
+cross-chain bridge, juror pool) are at 80%+ branch coverage; the 2 previously pending
+governance lifecycle tests are now active.
 
 ## Iteration Log
 
@@ -142,7 +143,10 @@ pending governance lifecycle tests are now active.
   - DisputeResolution 38% → 88% (added full appeal/jury commit-reveal coverage)
   - VJGovernor 38% → 92%
   - BaselineInsurancePool 37% → 85%, InsurancePolicy 38% → 88%, InsurerRegistry 59% → 93%
-- All 742 tests passing, 0 pending. Overall: 95.4% stmts / 74.2% branches / 96.2% lines.
+- Then raised the next tier: EnforcementEngine 47% → 87%, BountyMarket 47% → 88%,
+  CrossChainBridge 65% → 94%, JurorPool 69% → 89%.
+- All 849 tests passing, 0 pending. Overall: 98.8% stmts / 82.3% branches / 99.1% lines
+  (overall branch coverage now above the 80% target).
 
 ### Iteration 8
 - Implemented Phase 6 (Production Readiness) contracts:

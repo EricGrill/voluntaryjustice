@@ -22,16 +22,17 @@ implementing a decentralized dispute resolution system, compiled with **Solidity
 
 | Metric | Coverage |
 |--------|----------|
-| Statements | 95.37% |
-| Branches | 74.23% |
-| Functions | 96.93% |
-| Lines | 96.21% |
-| Tests Passing | 742 (0 pending) |
+| Statements | 98.84% |
+| Branches | 82.31% |
+| Functions | 98.29% |
+| Lines | 99.14% |
+| Tests Passing | 849 (0 pending) |
 
-The core dispute, governance, and insurance contracts have been raised to 80%+ branch coverage
-(see M-01). Overall branch coverage is still **below the 80% target** because several
-remaining contracts (BountyMarket, EnforcementEngine, CrossChainBridge, and others) are not yet
-covered. Raising those is tracked as required work before any external audit.
+Overall branch coverage now **meets the 80% target**. All high-stakes contracts (dispute,
+governance, insurance, enforcement, bounty, cross-chain bridge, juror pool) are at 80%+ branch
+coverage (see M-01). A few registry/view contracts (CourtRegistry, EscrowVault, OracleRegistry,
+RulingAnchor, LegacyCourtBridge, ContractTemplateRegistry, StakingRewards) remain individually
+below 80% and are tracked for follow-up before any external audit.
 
 ---
 
@@ -90,23 +91,25 @@ All 22 production contracts under `contracts/` were reviewed. (The directory als
 | OracleRegistry | 100 | 67.65 | 100 | 100 |
 | StakingRewards | 100 | 79.63 | 100 | 100 |
 | ReputationScoring | 96.00 | 83.33 | 100 | 100 |
-| JurorPool | 96.72 | 68.52 | 100 | 96.63 |
+| JurorPool | 98.36 | 88.89 | 100 | 100 |
 | ExclusionRegistry | 95.65 | 70.83 | 100 | 90.63 |
 | VRFConsumer | 95.24 | 81.25 | 100 | 100 |
-| CrossChainBridge | 94.83 | 64.52 | 100 | 95.95 |
+| CrossChainBridge | 100 | 93.55 | 100 | 100 |
 | VJToken | 92.86 | 92.86 | 87.50 | 93.75 |
 | InsurerRegistry | 100 | 93.10 | 100 | 100 |
 | RulingAnchor | 82.14 | 69.23 | 83.33 | 84.21 |
-| EnforcementEngine | 78.85 | 47.14 | 90.91 | 81.16 |
-| BountyMarket | 72.41 | 47.17 | 81.25 | 76.19 |
+| EnforcementEngine | 100 | 87.14 | 100 | 100 |
+| BountyMarket | 100 | 87.74 | 100 | 100 |
 | InsurancePolicy | 100 | 87.88 | 100 | 100 |
 | DisputeResolution | 100 | 88.10 | 100 | 100 |
 | BaselineInsurancePool | 100 | 85.19 | 100 | 100 |
 | VJGovernor | 100 | 92.31 | 100 | 100 |
 
-> The dispute, governance, and insurance contracts above were brought to 80%+ branch coverage
-> after the initial review. `EnforcementEngine` (47%), `BountyMarket` (47%), `CrossChainBridge`
-> (65%), `JurorPool` (69%), and several view-heavy registries remain below target.
+> The dispute, governance, insurance, enforcement, bounty, cross-chain, and juror-pool
+> contracts were all brought to 80%+ branch coverage after the initial review. A few
+> view-heavy registry contracts (CourtRegistry, EscrowVault, OracleRegistry, RulingAnchor,
+> LegacyCourtBridge, ContractTemplateRegistry, StakingRewards) remain individually below 80%,
+> though overall branch coverage is now above target.
 
 ---
 
@@ -179,26 +182,28 @@ They remain candidates for future work and must not be assumed present:
 ### M-01: Branch Coverage Below Target
 
 **Location:** Multiple contracts
-**Description:** Overall branch coverage is 74.23%, below the 80% target. The highest-stakes
-contracts have now been remediated:
+**Description:** Overall branch coverage is now 82.31%, above the 80% target. The highest-stakes
+contracts have all been remediated:
 
 - VJGovernor.sol — 38.46% → **92.31%** ✅
 - DisputeResolution.sol — 38.10% → **88.10%** ✅
 - BaselineInsurancePool.sol — 37.04% → **85.19%** ✅
 - InsurancePolicy.sol — 37.88% → **87.88%** ✅
 - InsurerRegistry.sol — 58.62% → **93.10%** ✅
+- EnforcementEngine.sol — 47.14% → **87.14%** ✅
+- BountyMarket.sol — 47.17% → **87.74%** ✅
+- CrossChainBridge.sol — 64.52% → **93.55%** ✅
+- JurorPool.sol — 68.52% → **88.89%** ✅
 
-Still below target and tracked for follow-up:
+Still individually below target and tracked for follow-up (mostly view-heavy registries):
+OracleRegistry (67.65%), RulingAnchor (69.23%), EscrowVault (68.75%), LegacyCourtBridge (70%),
+ExclusionRegistry (70.83%), CourtRegistry (71.43%), ContractTemplateRegistry (77.27%),
+StakingRewards (79.63%).
 
-- EnforcementEngine.sol (47.14% branch)
-- BountyMarket.sol (47.17% branch)
-- CrossChainBridge.sol (64.52% branch)
-- JurorPool.sol (68.52% branch)
+**Recommendation:** Continue adding edge-case and error-path tests for these remaining
+contracts before any external audit or deployment.
 
-**Recommendation:** Continue adding edge-case and error-path tests for the remaining contracts
-before any external audit or deployment.
-
-**Status:** Partially resolved — core/governance/insurance done; others open.
+**Status:** Largely resolved — all high-stakes contracts done; a few registries remain.
 
 ---
 
@@ -302,9 +307,10 @@ loops before deployment.
 
 The deployment checklist's security gate is **not yet satisfied**. Outstanding items:
 
-1. ~~**Raise branch coverage** to 80%+ on DisputeResolution, VJGovernor, and the insurance
-   contracts; resolve the 2 pending governance tests.~~ ✅ Done. Extend the same to the
-   remaining contracts (EnforcementEngine, BountyMarket, CrossChainBridge, JurorPool).
+1. ~~**Raise branch coverage** to 80%+ on the high-stakes contracts (dispute, governance,
+   insurance, enforcement, bounty, cross-chain, juror pool); resolve the 2 pending governance
+   tests.~~ ✅ Done — overall branch coverage is now 82.31%. Extend the same to the remaining
+   registry/view contracts (OracleRegistry, RulingAnchor, EscrowVault, CourtRegistry, …).
 2. **Run static analysis** (Slither, Mythril) and triage findings. *(Not yet run — requires
    local Python/pip install.)*
 3. **Commission an external audit** by a reputable firm.
@@ -323,9 +329,9 @@ npx solhint 'contracts/**/*.sol'
 ## Deployment Checklist (gate status)
 
 ### Pre-Deployment
-- [x] All tests passing (742/742, 0 pending)
-- [x] Branch coverage above 80% for core/insurance/governance contracts
-- [ ] Branch coverage above 80% for all remaining contracts
+- [x] All tests passing (849/849, 0 pending)
+- [x] Overall branch coverage above 80% (82.31%); all high-stakes contracts at 80%+
+- [ ] Branch coverage above 80% for the remaining registry/view contracts
 - [ ] Static analysis run and clean
 - [ ] External audit complete
 - [ ] Bug bounty launched
@@ -348,10 +354,10 @@ npx solhint 'contracts/**/*.sol'
 
 The protocol implements solid baseline practices — role-based access control, reentrancy
 guards, staking/slashing economics, a governance timelock, and constitutional constraints in
-the Governor. The core dispute, governance, and insurance contracts have been brought to 80%+
-branch coverage. However, this is an **internal review of an unaudited draft**, overall branch
-coverage is still below target (several contracts remain untested), and several security
-features previously claimed in documentation are **not present in the code**.
+the Governor. All high-stakes contracts have been brought to 80%+ branch coverage and overall
+branch coverage now exceeds the 80% target (82.31%). However, this is an **internal review of
+an unaudited draft**, a few registry/view contracts remain individually below target, and
+several security features previously claimed in documentation are **not present in the code**.
 
 **An external audit, increased test coverage, and static analysis are required before any
 production deployment.**
